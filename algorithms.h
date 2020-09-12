@@ -54,7 +54,7 @@ T power(T x, N n, BinaryOperation op)
 }
 
 template<typename I>
-bool miller_rabin_test(I n, I q, I k, I w)
+bool miller_rabin_test(const I& n, const I& q, const I& k, const I& w)
 {
     // assert(n > 1 && n - 1 == power(I{2}, k, std::multiplies<>()) * q && odd(q));
     modulo_multiply<I> mmult{n};
@@ -87,7 +87,7 @@ std::pair<I, I> find_q_and_k(I n)
 }
 
 template<typename I>
-bool is_prime(I n, std::mt19937& gen)
+bool is_prime(const I& n, std::mt19937& gen)
 {
     assert(n > 3);
     assert((n & 1) == 1);
@@ -106,7 +106,7 @@ bool is_prime(I n, std::mt19937& gen)
     return true;
 }
 
-const auto& bigPrimes()
+const auto& big_primes()
 {
     static const auto primes = []()
     {
@@ -136,7 +136,7 @@ const auto& bigPrimes()
 
 std::uint64_t big_random_prime(std::mt19937& gen)
 {
-    const auto& primesList = bigPrimes();
+    const auto& primesList = big_primes();
     std::uniform_int_distribution<std::uint64_t> distrib(0, primesList.size() - 1);
     return primesList.at(distrib(gen));
 }
@@ -194,11 +194,9 @@ N stein_gcd(N m, N n)
 }
 
 template<typename I>
-I multiplicative_inverse(I a, I n)
+I multiplicative_inverse(const I& a, const I& n)
 {
     std::pair<I, I> p = extended_gcd(a, n);
-
-    std::cout << "first: " << p.first << ", second: " << p.second << std::endl;
 
     if(p.second != I{1}) return I{0};
     if(p.first < I{0}) return p.first + n;

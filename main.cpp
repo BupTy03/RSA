@@ -16,7 +16,7 @@ struct rsa_keys
     cpp_int n;
 };
 
-cpp_int calculate_public_key(cpp_int n, std::mt19937& gen)
+cpp_int calculate_public_key(const cpp_int& n, std::mt19937& gen)
 {
     std::uniform_int_distribution<std::uint64_t> distrib(65537, std::min(std::uint64_t{n - 1}, std::numeric_limits<std::uint64_t>::max()));
     cpp_int result = distrib(gen);
