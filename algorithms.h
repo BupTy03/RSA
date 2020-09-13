@@ -10,7 +10,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 
-using cpp_int = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<4096, 4096, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void> >;
+using cpp_int = boost::multiprecision::cpp_int;
 
 
 template<typename I>
