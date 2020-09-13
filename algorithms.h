@@ -7,6 +7,11 @@
 #include <array>
 #include <iostream>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
+
+using cpp_int = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<4096, 4096, boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void> >;
+
 
 template<typename I>
 struct modulo_multiply
@@ -76,14 +81,14 @@ bool miller_rabin_test(const I& n, const I& q, const I& k, const I& w)
 template<typename I>
 std::pair<I, I> find_q_and_k(I n)
 {
-    I k{0};
-    while ((n & 1) == I{0})
+    I k(0);
+    while ((n & 1) == 0)
     {
         n >>= 1;
         ++k;
     }
 
-    return {n, k};
+    return std::pair<I, I>(n, k);
 }
 
 template<typename I>
@@ -92,53 +97,34 @@ bool is_prime(const I& n, std::mt19937& gen)
     assert(n > 3);
     assert((n & 1) == 1);
 
+    constexpr int prime_numbers[] = {
+            5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107,
+            109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227,
+            229, 233, 239, 241, 251};
+
+    for(int num : prime_numbers)
+    {
+        if(n == num)
+            return true;
+
+        if(n % num == 0)
+            return false;
+    }
+
     constexpr std::size_t countChecks = 100;
 
-    std::uniform_int_distribution<I> distrib(3, n - 1);
-    const auto[q, k] = find_q_and_k(n - 1);
+    I maxN = n - 1;
+    const std::uint64_t maxVal = maxN > std::numeric_limits<std::uint64_t>::max() ? std::numeric_limits<std::uint64_t>::max() : std::uint64_t{maxN};
+    std::uniform_int_distribution<std::uint64_t> distrib(3, maxVal);
+    const std::pair<cpp_int, cpp_int> q_k = find_q_and_k(maxN);
     for(std::size_t i = 0; i < countChecks; ++i)
     {
-        const auto w = distrib(gen);
-        if(!miller_rabin_test(n, q, k, w))
+        const cpp_int w = distrib(gen);
+        if(!miller_rabin_test(I(n), I(q_k.first), I(q_k.second), I(w)))
             return false;
     }
 
     return true;
-}
-
-const auto& big_primes()
-{
-    static const auto primes = []()
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
-
-        std::uint64_t p = 999999999;
-        std::array<std::uint64_t, 10000> result;
-
-        std::size_t i = 0;
-        while(i < result.size())
-        {
-            if(is_prime(p, gen))
-            {
-                result[i] = p;
-                ++i;
-            }
-
-            p += 2;
-        }
-
-        return result;
-    }();
-
-    return primes;
-}
-
-std::uint64_t big_random_prime(std::mt19937& gen)
-{
-    const auto& primesList = big_primes();
-    std::uniform_int_distribution<std::uint64_t> distrib(0, primesList.size() - 1);
-    return primesList.at(distrib(gen));
 }
 
 template<typename N> std::pair<N, N> quotient_remainder(const N& a, const N& b) { return {a / b, a % b}; }
@@ -167,8 +153,8 @@ N stein_gcd(N m, N n)
 {
     using std::swap;
 
-    if(n < N{0}) m = -m;
-    if(n < N{0}) n = -n;
+    assert(m >= N{0});
+    assert(n >= N{0});
     if(m == N{0}) return n;
     if(n == N{0}) return m;
 

@@ -1,20 +1,68 @@
 #include "algorithms.h"
 
 #include <iostream>
+#include <fstream>
 #include <vector>
-
-#include <boost/multiprecision/cpp_int.hpp>
-
-
-using cpp_int = boost::multiprecision::cpp_int;
+#include <functional>
+#include <iterator>
 
 
-struct rsa_keys
+cpp_int big_random_prime(std::mt19937& gen)
 {
-    cpp_int public_key;
-    cpp_int private_key;
-    cpp_int n;
-};
+//    const auto& primesList = big_primes();
+//    std::uniform_int_distribution<std::size_t> distrib(0, primesList.size() - 1);
+//    return primesList.at(distrib(gen));
+
+    std::ifstream file("../very_big_primes.txt");
+    file.unsetf(std::ios::skipws);
+
+    const std::size_t countLines = [&]() {
+        std::istream_iterator<char> first(file);
+        std::istream_iterator<char> last;
+
+        return std::count(first, last, '\n');
+    }();
+
+    std::uniform_int_distribution<std::size_t> distrib(0, countLines - 1);
+    const std::size_t lineNumber = distrib(gen);
+
+    file.clear();
+    file.seekg(0);
+
+    std::istream_iterator<char> first(file);
+    std::istream_iterator<char> last;
+
+    auto it = first;
+    if(lineNumber > 0)
+    {
+        std::size_t currentLine = 0;
+        for (; it != last; ++it)
+        {
+            if (*it == '\n')
+            {
+                ++currentLine;
+                if(currentLine == lineNumber - 1)
+                {
+                    ++it;
+                    break;
+                }
+            }
+        }
+    }
+
+    std::string prime;
+    for(; it != last; ++it)
+    {
+        char ch = *it;
+        if(ch == '\n')
+            break;
+
+        prime += ch;
+    }
+
+    std::cout << prime << std::endl;
+    return cpp_int(prime);
+}
 
 cpp_int calculate_public_key(const cpp_int& n, std::mt19937& gen)
 {
@@ -25,6 +73,13 @@ cpp_int calculate_public_key(const cpp_int& n, std::mt19937& gen)
 
     return result;
 }
+
+struct rsa_keys
+{
+    cpp_int public_key;
+    cpp_int private_key;
+    cpp_int n;
+};
 
 rsa_keys generate_rsa_keys(std::mt19937& gen)
 {
@@ -58,6 +113,7 @@ void print(const std::vector<cpp_int>& vec)
         std::cout << ch << " ";
     std::cout << ']' << std::endl;
 }
+
 
 int main()
 {
