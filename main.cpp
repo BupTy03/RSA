@@ -94,56 +94,58 @@ rsa_keys generate_rsa_keys(std::mt19937& gen)
     return result;
 }
 
-std::vector<cpp_int> rsa(const std::vector<cpp_int>& data, cpp_int key, cpp_int n)
-{
-    std::vector<cpp_int> result;
-    result.reserve(data.size());
-    for(const auto& chunk : data)
-        result.emplace_back(power(chunk, key, modulo_multiply<cpp_int>(n)));
-
-    return result;
-}
-
-void print(const std::vector<cpp_int>& vec)
-{
-    std::cout << "[ ";
-    for(const auto& ch : vec)
-        std::cout << ch << " ";
-    std::cout << ']' << std::endl;
-}
-
-long map(long x, long in_min, long in_max, long out_min, long out_max)
-{
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-
-const unsigned char* rsa(const unsigned char* first, const unsigned char* last, unsigned char* dst, const cpp_int& key, const cpp_int& n)
+unsigned char* rsa(const unsigned char* first, const unsigned char* last, unsigned char* dst, const cpp_int& key, const cpp_int& n)
 {
     cpp_int chunk;
     boost::multiprecision::import_bits(chunk, first, last);
-
-    std::cout << "[chunk ]: " << chunk << std::endl;
-
     const cpp_int result = power(chunk, key, modulo_multiply<cpp_int>(n));
-    std::cout << "[result]: " << result << std::endl;
-
     return boost::multiprecision::export_bits(result, dst, 8);
 }
 
-
-std::vector<unsigned char> str_to_bytes(const std::string& str)
+std::size_t size_of_file(std::istream& input)
 {
-    std::vector<unsigned char> result(str.size(), 0);
-    std::transform(str.cbegin(), str.cend(), result.begin(), [](char ch) -> unsigned char { return map(ch, -128, 127, 0, 255); });
+    input.seekg(0, std::ios_base::end);
+    const auto result = input.tellg();
+    input.seekg(0);
+    input.clear();
     return result;
 }
 
-std::string bytes_to_str(const std::vector<unsigned char>& bytes)
+void rsa(std::istream& input, std::ostream& output, const cpp_int& key, const cpp_int& n)
 {
-    std::string result(bytes.size(), '\0');
-    std::transform(bytes.cbegin(), bytes.cend(), result.begin(), [](unsigned char ch) -> char { return map(ch, 0, 255, -128, 127); });
-    return result;
+    const std::array<unsigned char, 512> zerosBuffer = {0};
+    std::array<unsigned char, 512> inputBuffer = {0};
+    std::array<unsigned char, 512> outputBuffer = {0};
+
+    const std::size_t fileSize = size_of_file(input);
+    while(input)
+    {
+        const std::size_t buffSize = std::min(inputBuffer.size(), fileSize - input.tellg());
+        if(buffSize == 0)
+            return;
+
+        input.read(reinterpret_cast<char*>(inputBuffer.data()), buffSize);
+
+        const auto bytesWritten = rsa(inputBuffer.data(), inputBuffer.data() + buffSize, outputBuffer.data(), key, n) - outputBuffer.data();
+        if(bytesWritten < outputBuffer.size())
+            output.write(reinterpret_cast<const char*>(zerosBuffer.data()), outputBuffer.size() - bytesWritten);
+
+        output.write(reinterpret_cast<const char*>(outputBuffer.data()), bytesWritten);
+    }
+}
+
+void encrypt_file(const std::string& inputFilename, const std::string& outputFilename, const cpp_int& key, const cpp_int& n)
+{
+    std::ifstream inputFile(inputFilename, std::ios::binary);
+    std::ofstream outputFile(outputFilename, std::ios::binary);
+    rsa(inputFile, outputFile, key, n);
+}
+
+void decrypt_file(const std::string& inputFilename, const std::string& outputFilename, const cpp_int& key, const cpp_int& n)
+{
+    std::ifstream encryptedFile(inputFilename, std::ios::binary);
+    std::ofstream decryptedFile(outputFilename, std::ios::binary);
+    rsa(encryptedFile, decryptedFile, key, n);
 }
 
 
@@ -155,16 +157,13 @@ int main()
     const auto[pub, prv, n] = generate_rsa_keys(gen);
     std::cout << "pub = " << pub << ", prv = " << prv << ", n = " << n << std::endl;
 
-    const auto srcBytes = str_to_bytes("export into 8-bit unsigned values");
+    const cpp_int powerOfBlockSize = power(cpp_int(2), 4096, std::multiplies<cpp_int>());
+    assert(n > powerOfBlockSize);
 
-    std::array<unsigned char, 256> encrypted = {0};
-    const auto writtenToEncrypted = rsa(srcBytes.data(), srcBytes.data() + srcBytes.size(), encrypted.data(), pub, n) - encrypted.data();
-    std::cout << "[written to encrypted]: " << writtenToEncrypted << std::endl;
+    const std::string dir = "../";
+    const std::string filename = "troll.jpg";
 
-    std::array<unsigned char, 256> decrypted = {0};
-    const auto writtenToDecrypted = rsa(encrypted.data(), encrypted.data() + encrypted.size(), decrypted.data(), prv, n) - decrypted.data();
-
-    std::cout << "[written to decrypted]: " << writtenToDecrypted << std::endl;
-    std::cout << "Decrypted text: " << bytes_to_str(std::vector<unsigned char>(decrypted.data(), decrypted.data() + writtenToDecrypted)) << std::endl;
+    encrypt_file(dir + filename, dir + filename + ".rsa", pub, n);
+    decrypt_file(dir + filename + ".rsa", dir + "result_" + filename, prv, n);
     return 0;
 }
