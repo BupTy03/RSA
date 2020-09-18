@@ -5,6 +5,8 @@
 #include <array>
 #include <functional>
 #include <iterator>
+#include <sstream>
+#include <cstring>
 
 #include <boost/multiprecision/cpp_int.hpp>
 
@@ -128,36 +130,55 @@ void rsa(std::istream& input, std::ostream& output, const cpp_int& key, const cp
     }
 }
 
-void encrypt_file(const std::string& inputFilename, const std::string& outputFilename, const cpp_int& key, const cpp_int& n)
+cpp_int from_hex(const char* str)
+{
+    std::istringstream istr(str);
+    cpp_int result;
+    istr >> std::hex >> result;
+    return result;
+}
+
+void show_rsa_keys()
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    const auto[pub, prv, n] = generate_rsa_keys(gen);
+    std::cout << "public = " << std::hex << pub
+            << "\nprivate = " << std::hex << prv
+            << "\nn = " << std::hex << n << std::endl;
+}
+
+void rsa(const char* inputFilename, const char* outputFilename, const cpp_int& key, const cpp_int& n)
 {
     std::ifstream inputFile(inputFilename, std::ios::binary);
     std::ofstream outputFile(outputFilename, std::ios::binary);
     rsa(inputFile, outputFile, key, n);
 }
 
-void decrypt_file(const std::string& inputFilename, const std::string& outputFilename, const cpp_int& key, const cpp_int& n)
+
+int main(int argc, char* argv[])
 {
-    std::ifstream encryptedFile(inputFilename, std::ios::binary);
-    std::ofstream decryptedFile(outputFilename, std::ios::binary);
-    rsa(encryptedFile, decryptedFile, key, n);
-}
+    if(argc == 2 && std::strcmp(argv[1], "-keys") == 0)
+    {
+        show_rsa_keys();
+    }
+    else if(argc == 5)
+    {
+        const char* inputFilename = argv[1];
+        const char* outputFilename = argv[2];
+        const cpp_int key = from_hex(argv[3]);
+        const cpp_int n = from_hex(argv[4]);
 
+        const cpp_int powerOfBlockSize = power(cpp_int(2), 4096, std::multiplies<cpp_int>());
+        assert(n > powerOfBlockSize);
 
-int main()
-{
-    std::random_device rd;
-    std::mt19937 gen(rd());
+        rsa(inputFilename, outputFilename, key, n);
+    }
+    else
+    {
+        return -1;
+    }
 
-    const auto[pub, prv, n] = generate_rsa_keys(gen);
-    std::cout << "pub = " << pub << ", prv = " << prv << ", n = " << n << std::endl;
-
-    const cpp_int powerOfBlockSize = power(cpp_int(2), 4096, std::multiplies<cpp_int>());
-    assert(n > powerOfBlockSize);
-
-    const std::string dir = "../";
-    const std::string filename = "troll.jpg";
-
-    encrypt_file(dir + filename, dir + filename + ".rsa", pub, n);
-    decrypt_file(dir + filename + ".rsa", dir + "result_" + filename, prv, n);
     return 0;
 }

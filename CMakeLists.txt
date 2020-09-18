@@ -13,7 +13,7 @@ if(CMAKE_BUILD_TYPE MATCHES Release)
     if(MSVC)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /O2 /Oi /Ot /GL")
     else()
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -static -static-libgcc -static-libstdc++")
     endif()
 endif()
 
