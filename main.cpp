@@ -30,7 +30,6 @@ big_int big_random_prime(std::mt19937& gen, std::size_t blockSize)
     while(!is_prime<big_int, 100>(result, gen))
         result += 2;
 
-    assert(result < maxValue);
     return result;
 }
 
@@ -206,7 +205,7 @@ int main(int argc, char* argv[])
     {
         print_help();
     }
-    if(argc == 3 && std::strcmp(argv[1], "-k") == 0)
+    else if(argc == 3 && std::strcmp(argv[1], "-k") == 0)
     {
         const auto blockSize = std::atoi(argv[2]);
         if(!is_allowed_block_size(blockSize))
@@ -264,5 +263,6 @@ int main(int argc, char* argv[])
         print_help();
         return -4;
     }
+
     return 0;
 }
