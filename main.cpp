@@ -120,7 +120,7 @@ void rsa(std::istream& input, std::ostream& output, const cpp_int& key, const cp
 
         input.read(reinterpret_cast<char*>(inputBuffer.data()), buffSize);
 
-        const auto bytesWritten = rsa(inputBuffer.data(), inputBuffer.data() + buffSize, outputBuffer.data(), key, n) - outputBuffer.data();
+        const auto bytesWritten = static_cast<std::size_t>(rsa(inputBuffer.data(), inputBuffer.data() + buffSize, outputBuffer.data(), key, n) - outputBuffer.data());
         if(bytesWritten < outputBuffer.size())
             output.write(reinterpret_cast<const char*>(zerosBuffer.data()), outputBuffer.size() - bytesWritten);
 

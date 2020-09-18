@@ -5,7 +5,6 @@
 #include <cassert>
 #include <limits>
 #include <array>
-#include <iostream>
 
 
 template<typename I>
