@@ -19,6 +19,4 @@ endif()
 
 find_package(Boost)
 include_directories(${Boost_INCLUDE_DIR})
-
-include_directories("D:/Libs/boost_1_69_0")
 add_executable(RSA main.cpp algorithms.h)
