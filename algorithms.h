@@ -7,11 +7,6 @@
 #include <array>
 #include <iostream>
 
-#include <boost/multiprecision/cpp_int.hpp>
-
-
-using cpp_int = boost::multiprecision::cpp_int;
-
 
 template<typename I>
 struct modulo_multiply
@@ -116,10 +111,10 @@ bool is_prime(const I& n, std::mt19937& gen)
     I maxN = n - 1;
     const std::uint64_t maxVal = maxN > std::numeric_limits<std::uint64_t>::max() ? std::numeric_limits<std::uint64_t>::max() : std::uint64_t{maxN};
     std::uniform_int_distribution<std::uint64_t> distrib(3, maxVal);
-    const std::pair<cpp_int, cpp_int> q_k = find_q_and_k(maxN);
+    const std::pair<I, I> q_k = find_q_and_k(maxN);
     for(std::size_t i = 0; i < countChecks; ++i)
     {
-        const cpp_int w = distrib(gen);
+        const I w = distrib(gen);
         if(!miller_rabin_test(I(n), I(q_k.first), I(q_k.second), I(w)))
             return false;
     }

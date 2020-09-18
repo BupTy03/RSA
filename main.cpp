@@ -2,10 +2,14 @@
 
 #include <iostream>
 #include <fstream>
-#include <vector>
 #include <array>
 #include <functional>
 #include <iterator>
+
+#include <boost/multiprecision/cpp_int.hpp>
+
+
+using cpp_int = boost::multiprecision::cpp_int;
 
 
 cpp_int big_random_prime(std::mt19937& gen)
@@ -60,17 +64,7 @@ cpp_int big_random_prime(std::mt19937& gen)
     return cpp_int(prime);
 }
 
-cpp_int calculate_public_key(const cpp_int& n, std::mt19937& gen)
-{
-//    std::uniform_int_distribution<std::uint64_t> distrib(65537, std::min(std::uint64_t{n - 1}, std::numeric_limits<std::uint64_t>::max()));
-//    cpp_int result = distrib(gen);
-//    while(stein_gcd(result, n) != 1)
-//        result = distrib(gen);
-//
-//    return result;
-
-    return big_random_prime(gen);
-}
+cpp_int calculate_public_key(const cpp_int& n, std::mt19937& gen) { return big_random_prime(gen); }
 
 struct rsa_keys
 {
