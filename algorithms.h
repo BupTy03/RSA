@@ -85,33 +85,68 @@ std::pair<I, I> find_q_and_k(I n)
     return std::pair<I, I>(n, k);
 }
 
-template<typename I>
+template<typename I, std::size_t CountChecks>
 bool is_prime(const I& n, std::mt19937& gen)
 {
-    assert(n > 3);
+    assert(n > 2);
     assert((n & 1) == 1);
 
-    constexpr int prime_numbers[] = {
-            5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107,
-            109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223, 227,
-            229, 233, 239, 241, 251};
+    if(n % 5 == 0) return false;
+    if(n % 7 == 0) return false;
+    if(n % 11 == 0) return false;
+    if(n % 13 == 0) return false;
+    if(n % 17 == 0) return false;
+    if(n % 19 == 0) return false;
+    if(n % 23 == 0) return false;
+    if(n % 29 == 0) return false;
+    if(n % 31 == 0) return false;
+    if(n % 41 == 0) return false;
+    if(n % 43 == 0) return false;
+    if(n % 47 == 0) return false;
+    if(n % 53 == 0) return false;
+    if(n % 59 == 0) return false;
+    if(n % 61 == 0) return false;
+    if(n % 67 == 0) return false;
+    if(n % 71 == 0) return false;
+    if(n % 73 == 0) return false;
+    if(n % 79 == 0) return false;
+    if(n % 83 == 0) return false;
+    if(n % 89 == 0) return false;
+    if(n % 97 == 0) return false;
+    if(n % 101 == 0) return false;
+    if(n % 103 == 0) return false;
+    if(n % 107 == 0) return false;
+    if(n % 109 == 0) return false;
+    if(n % 113 == 0) return false;
+    if(n % 127 == 0) return false;
+    if(n % 131 == 0) return false;
+    if(n % 137 == 0) return false;
+    if(n % 139 == 0) return false;
+    if(n % 149 == 0) return false;
+    if(n % 151 == 0) return false;
+    if(n % 163 == 0) return false;
+    if(n % 167 == 0) return false;
+    if(n % 173 == 0) return false;
+    if(n % 179 == 0) return false;
+    if(n % 181 == 0) return false;
+    if(n % 191 == 0) return false;
+    if(n % 193 == 0) return false;
+    if(n % 197 == 0) return false;
+    if(n % 199 == 0) return false;
+    if(n % 211 == 0) return false;
+    if(n % 223 == 0) return false;
+    if(n % 227 == 0) return false;
+    if(n % 229 == 0) return false;
+    if(n % 233 == 0) return false;
+    if(n % 239 == 0) return false;
+    if(n % 241 == 0) return false;
+    if(n % 251 == 0) return false;
 
-    for(int num : prime_numbers)
-    {
-        if(n == num)
-            return true;
-
-        if(n % num == 0)
-            return false;
-    }
-
-    constexpr std::size_t countChecks = 100;
-
-    I maxN = n - 1;
+    const I maxN = n - 1;
     const std::uint64_t maxVal = maxN > std::numeric_limits<std::uint64_t>::max() ? std::numeric_limits<std::uint64_t>::max() : std::uint64_t{maxN};
     std::uniform_int_distribution<std::uint64_t> distrib(3, maxVal);
     const std::pair<I, I> q_k = find_q_and_k(maxN);
-    for(std::size_t i = 0; i < countChecks; ++i)
+    for(std::size_t i = 0; i < CountChecks; ++i)
     {
         const I w = distrib(gen);
         if(!miller_rabin_test(I(n), I(q_k.first), I(q_k.second), I(w)))
