@@ -9,45 +9,42 @@
 #include <cstring>
 
 
-void print_help()
+namespace po = boost::program_options;
+
+
+const std::string& require_string_option(const po::variables_map& options, const std::string& option)
 {
-    std::cout << "Command format to generate keys:\n"
-                 "RSA -k <blocksize (must be 32, 64, 128, 256, 512, 1024, 2048 or 4096)>\n"
-                 "Example: RSA -k 256\n\n"
-                 "Command format to encrypt file:\n"
-                 "RSA -e <blocksize> <inputFile> <outputFile> <key> <n>\n"
-                 "Example: RSA -e file.txt encrypted_file.txt 3AF434353324124 12312424325435\n\n"
-                 "Command format to decrypt file:\n"
-                 "RSA -d <blocksize> <inputFile> <outputFile> <key> <n>\n"
-                 "Example: RSA -d file.txt decrypted_file.txt FAFAFAF2342342333 12312424325435\n\n"
-                  << std::endl;
+    auto it = options.find(option);
+    if(it == options.end())
+        throw std::runtime_error{"Option '" + option + "' missed"};
+
+    return it->second.as<std::string>();
 }
 
-bool is_help(const char* command)
+std::size_t get_rsa_block_size_options(const po::variables_map& options, const std::string& option)
 {
-    constexpr const char* variants[] = { "-h", "h", "-help", "help", "?", "/?" };
-    return std::any_of(std::begin(variants), std::end(variants),
-                       [command](const char* v){ return std::strcmp(v, command) == 0; });
+    auto it = options.find(option);
+    if(it == options.end())
+        throw std::runtime_error{"Option '" + option + "' missed"};
+
+    const auto blockSize = it->second.as<std::size_t>();
+    if(!is_allowed_rsa_block_size(blockSize))
+        throw std::runtime_error{"Error: invalid block size"};
+
+    return blockSize;
 }
 
-
-int main(int argc, char* argv[])
+void execute_program(int argc, char* argv[])
 {
-    namespace po = boost::program_options;
-
-
     po::variables_map vm;
     po::options_description desc("Options");
     desc.add_options()
             ("help,h", "Show help")
             ("block-size,b", po::value<std::size_t>()->default_value(256), "Block size (in bytes)")
-            ("mode,m", po::value<std::string>(), R"(Select mode: "keys", "encrypt" or "decrypt")")
             ("input-file,i", po::value<std::string>(), "Input file")
             ("output-file,o", po::value<std::string>(), "Output file")
-            ("public-key,pub", po::value<std::string>(), "Public key (in HEX format)")
-            ("private-key,prv", po::value<std::string>(), "Private key (in HEX format)")
-            ("modulus,n", po::value<std::string>(), "Modulus (N)")
-            ;
+            ("key,k", po::value<std::string>(), "Key in HEX format: public (for encrypt) or private (for decrypt)")
+            ("modulus,n", po::value<std::string>(), "Modulus (n)");
 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -55,70 +52,34 @@ int main(int argc, char* argv[])
     if(vm.count("help"))
     {
         std::cout << desc << std::endl;
-        return 0;
+        return;
     }
 
-    if(vm.count("mode") == 0)
-    {
-        std::cout << "Option 'mode' missed" << std::endl;
-        return -1;
-    }
-
-    const std::size_t blockSize = vm["block-size"].as<std::size_t>();
-    if(!is_allowed_rsa_block_size(blockSize))
-    {
-        std::cout << "Error: invalid block size" << std::endl;
-        return -2;
-    }
-
-    const std::string mode = vm["mode"].as<std::string>();
-    if(mode == "keys")
+    const auto blockSize = get_rsa_block_size_options(vm, "block-size");
+    if(vm.size() == 1)
     {
         show_rsa_keys(blockSize);
-        return 0;
+        return;
     }
 
-    static const std::array<std::string, 3> requiredOptions = {
-            "input-file", "output-file", "modulus"
-    };
+    rsa(require_string_option(vm, "input-file"),
+        require_string_option(vm, "output-file"),
+        blockSize,
+        from_hex(require_string_option(vm, "key")),
+        from_hex(require_string_option(vm, "modulus")));
+}
 
-    for(const std::string& option : requiredOptions)
-    {
-        if(vm.count(option) == 0)
-        {
-            std::cout << "Option '" << option << "' missed" << std::endl;
-            return -4;
-        }
+
+int main(int argc, char* argv[])
+{
+    try {
+        execute_program(argc, argv);
     }
-
-    const std::string inputFile = vm["input-file"].as<std::string>();
-    const std::string outputFile = vm["output-file"].as<std::string>();
-    const big_int n = from_hex(vm["modulus"].as<std::string>());
-
-    if(mode == "encrypt")
-    {
-        if(vm.count("public-key") == 0)
-        {
-            std::cout << "Option 'public-key' missed" << std::endl;
-            return -5;
-        }
-
-        rsa(inputFile, outputFile, blockSize, from_hex(vm["public-key"].as<std::string>()), n);
+    catch (std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
-    else if(mode == "decrypt")
-    {
-        if(vm.count("private-key") == 0)
-        {
-            std::cout << "Option 'private-key' missed" << std::endl;
-            return -6;
-        }
-
-        rsa(inputFile, outputFile, blockSize, from_hex(vm["private-key"].as<std::string>()), n);
-    }
-    else
-    {
-        std::cout << "Unknown 'mode' option value" << std::endl;
-        return -7;
+    catch (...) {
+        std::cerr << "Unknown error" << std::endl;
     }
 
     return 0;
