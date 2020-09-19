@@ -3,10 +3,7 @@
 #include "utils.h"
 
 #include <boost/program_options.hpp>
-
 #include <iostream>
-#include <functional>
-#include <cstring>
 
 
 namespace po = boost::program_options;
@@ -21,7 +18,7 @@ const std::string& require_string_option(const po::variables_map& options, const
     return it->second.as<std::string>();
 }
 
-std::size_t get_rsa_block_size_options(const po::variables_map& options, const std::string& option)
+std::size_t get_rsa_block_size_option(const po::variables_map& options, const std::string& option)
 {
     auto it = options.find(option);
     if(it == options.end())
@@ -55,7 +52,7 @@ void execute_program(int argc, char* argv[])
         return;
     }
 
-    const auto blockSize = get_rsa_block_size_options(vm, "block-size");
+    const auto blockSize = get_rsa_block_size_option(vm, "block-size");
     if(vm.size() == 1)
     {
         show_rsa_keys(blockSize);
@@ -77,9 +74,11 @@ int main(int argc, char* argv[])
     }
     catch (std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
+        return -1;
     }
     catch (...) {
         std::cerr << "Unknown error" << std::endl;
+        return -2;
     }
 
     return 0;
