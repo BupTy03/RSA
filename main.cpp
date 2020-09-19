@@ -66,20 +66,38 @@ void execute_program(int argc, char* argv[])
         from_hex(require_string_option(vm, "modulus")));
 }
 
+void test()
+{
+    const std::size_t blockSize = 256;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    const std::string filename = "../troll.jpg";
+    const std::string encrypted = "../enc_troll.jpg";
+    const std::string decrypted = "../dec_troll.jpg";
+
+    const std::size_t countThreads = 16;
+
+    const auto[pub, prv, n] = generate_rsa_keys(gen, blockSize);
+    rsa(filename, encrypted, blockSize, pub, n);
+    rsa(encrypted, decrypted, blockSize, prv, n);
+}
+
 
 int main(int argc, char* argv[])
 {
-    try {
-        execute_program(argc, argv);
-    }
-    catch (std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return -1;
-    }
-    catch (...) {
-        std::cerr << "Unknown error" << std::endl;
-        return -2;
-    }
-
+//    try {
+//        execute_program(argc, argv);
+//    }
+//    catch (std::exception& e) {
+//        std::cerr << "Error: " << e.what() << std::endl;
+//        return -1;
+//    }
+//    catch (...) {
+//        std::cerr << "Unknown error" << std::endl;
+//        return -2;
+//    }
+    test();
     return 0;
 }
