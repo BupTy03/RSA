@@ -149,7 +149,7 @@ bool is_prime(const I& n, std::mt19937& gen)
     for(std::size_t i = 0; i < CountChecks; ++i)
     {
         const I w = distrib(gen);
-        if(!miller_rabin_test(I(n), I(q_k.first), I(q_k.second), I(w)))
+        if(!miller_rabin_test(n, q_k.first, q_k.second, w))
             return false;
     }
 
