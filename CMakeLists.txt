@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(RSA CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall")
@@ -19,4 +19,6 @@ endif()
 
 find_package(Boost)
 include_directories(${Boost_INCLUDE_DIR})
-add_executable(RSA main.cpp algorithms.h)
+link_directories(${Boost_LIBRARY_DIR})
+add_executable(RSA main.cpp algorithms.h rsa.cpp rsa.h utils.cpp utils.h)
+target_link_libraries(RSA PRIVATE ${Boost_LIBRARIES})
