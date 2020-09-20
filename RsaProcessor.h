@@ -3,7 +3,6 @@
 #include "Task.h"
 
 #include <vector>
-#include <cassert>
 #include <mutex>
 #include <condition_variable>
 
@@ -11,18 +10,9 @@
 class RsaProcessor
 {
 public:
-    explicit RsaProcessor(std::size_t blockSize, std::size_t countTasks, const big_int* pKey, const big_int* pN)
-        : blockSize_(blockSize)
-        , pKey_(pKey)
-        , pN_(pN)
-        , bigBuffer_(blockSize * countTasks)
-        , tasks_(countTasks)
-    {
-        assert(pKey != nullptr);
-        assert(pN != nullptr);
-    }
+    explicit RsaProcessor(std::size_t blockSize, std::size_t countTasks, const big_int* pKey, const big_int* pN);
 
-    std::size_t bufferSize() const { return bigBuffer_.size(); }
+    std::size_t bufferSize() const;
     void process(std::istream& input, std::ostream& output, std::size_t countBytes);
 
 private:

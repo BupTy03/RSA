@@ -1,15 +1,17 @@
 #include "rsa.h"
 #include "algorithms.h"
-#include "scope_exit.h"
 #include "RsaProcessor.h"
 
 #include <iostream>
 #include <fstream>
 #include <algorithm>
 #include <cassert>
-#include <thread>
-#include <mutex>
-#include <future>
+#include <array>
+
+
+static constexpr std::array<int, 8> ALLOWED_RSA_BLOCK_SIZES = {
+        32, 64, 128, 256, 512, 1024, 2048, 4096
+};
 
 
 rsa_keys generate_rsa_keys(std::mt19937& gen, std::size_t blockSize)
@@ -27,7 +29,8 @@ rsa_keys generate_rsa_keys(std::mt19937& gen, std::size_t blockSize)
     return result;
 }
 
-unsigned char* rsa(const unsigned char* first, const unsigned char* last, unsigned char* dst, const big_int& key, const big_int& n)
+unsigned char* rsa(const unsigned char* first, const unsigned char* last,
+                   unsigned char* dst, const big_int& key, const big_int& n)
 {
     big_int chunk;
     boost::multiprecision::import_bits(chunk, first, last);
@@ -55,59 +58,16 @@ void rsa(std::istream& input, std::ostream& output, std::size_t blockSize, const
     }
 }
 
-void rsa(const std::string& inputFilename, const std::string& outputFilename, std::size_t blockSize, const big_int& key, const big_int& n)
+void rsa(const std::string& inputFilename, const std::string& outputFilename,
+         std::size_t blockSize, const big_int& key, const big_int& n)
 {
     std::ifstream inputFile(inputFilename, std::ios::binary);
     std::ofstream outputFile(outputFilename, std::ios::binary);
     rsa(inputFile, outputFile, blockSize, key, n);
 }
 
-struct ComputeChunk
-{
-    explicit ComputeChunk(unsigned char* beginBuffer, unsigned char* endBuffer, const big_int& key, const big_int& n)
-        : beginBuffer_(beginBuffer)
-        , endBuffer_(endBuffer)
-        , pKey_(&key)
-        , pN_(&n)
-    {}
-
-    void operator()()
-    {
-        auto endWritten = rsa(beginBuffer_, endBuffer_, beginBuffer_, *pKey_, *pN_);
-        if(endWritten != endBuffer_)
-        {
-            std::rotate(beginBuffer_, endWritten, endBuffer_);
-            std::fill_n(beginBuffer_, endBuffer_ - endWritten, 0);
-        }
-    }
-
-private:
-    unsigned char* beginBuffer_;
-    unsigned char* endBuffer_;
-    const big_int* pKey_;
-    const big_int* pN_;
-};
-
-void rsa_chunk_mt(std::vector<unsigned char>& buffer, std::size_t countBytes, std::size_t blockSize, const big_int& key, const big_int& n, std::size_t countThreads)
-{
-    std::vector<std::future<void>> tasks;
-    SCOPE_EXIT{ for(auto& t : tasks) t.get(); };
-
-    tasks.reserve(countThreads);
-    for(std::size_t taskIdx = 0; taskIdx < countThreads; ++taskIdx)
-    {
-        auto beginChunk = buffer.data() + blockSize * taskIdx;
-        auto endChunk = beginChunk + blockSize;
-
-        tasks.emplace_back(std::async(std::launch::async, ComputeChunk(beginChunk, endChunk, key, n)));
-    }
-
-    const auto remainBytes = countBytes % countThreads;
-    if(remainBytes > 0)
-        rsa(buffer.data() + (countBytes - remainBytes), buffer.data() + countBytes, buffer.data(), key, n);
-}
-
-void rsa_mt(std::istream& input, std::ostream& output, std::size_t blockSize, const big_int& key, const big_int& n, std::size_t countThreads)
+void rsa_mt(std::istream& input, std::ostream& output, std::size_t blockSize,
+            const big_int& key, const big_int& n, std::size_t countThreads)
 {
     assert(countThreads > 0);
 
@@ -123,7 +83,8 @@ void rsa_mt(std::istream& input, std::ostream& output, std::size_t blockSize, co
     processor.process(input, output, remainingBytes);
 }
 
-void rsa_mt(const std::string& inputFilename, const std::string& outputFilename, std::size_t blockSize, const big_int& key, const big_int& n, std::size_t countThreads)
+void rsa_mt(const std::string& inputFilename, const std::string& outputFilename,
+            std::size_t blockSize, const big_int& key, const big_int& n, std::size_t countThreads)
 {
     std::ifstream inputFile(inputFilename, std::ios::binary);
     std::ofstream outputFile(outputFilename, std::ios::binary);
@@ -143,6 +104,6 @@ void show_rsa_keys(std::size_t blockSize)
 
 bool is_allowed_rsa_block_size(int blockSize)
 {
-    constexpr int allowed[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096 };
-    return std::find(std::begin(allowed), std::end(allowed), blockSize) != std::end(allowed);
+    return std::find(std::begin(ALLOWED_RSA_BLOCK_SIZES),
+                     std::end(ALLOWED_RSA_BLOCK_SIZES), blockSize) != std::end(ALLOWED_RSA_BLOCK_SIZES);
 }

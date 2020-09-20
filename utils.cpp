@@ -5,7 +5,6 @@
 
 #include <sstream>
 #include <istream>
-#include <fstream>
 
 
 big_int big_random_prime(std::mt19937& gen, std::size_t blockSize)
@@ -50,10 +49,4 @@ std::size_t size_of_file(std::istream& input)
     input.seekg(0);
     input.clear();
     return result;
-}
-
-std::size_t size_of_file(const std::string& filename)
-{
-    std::ifstream file(filename, std::ios::binary);
-    return size_of_file(file);
 }

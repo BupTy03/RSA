@@ -14,4 +14,3 @@ big_int big_random_coprime(const big_int& n);
 
 big_int from_hex(const std::string& str);
 std::size_t size_of_file(std::istream& input);
-std::size_t size_of_file(const std::string& filename);

@@ -1,9 +1,28 @@
 #include "RsaProcessor.h"
-
 #include "rsa.h"
 
+#include <cassert>
 #include <algorithm>
 
+
+RsaProcessor::RsaProcessor(std::size_t blockSize, std::size_t countTasks, const big_int* pKey, const big_int* pN)
+    : blockSize_(blockSize)
+    , pKey_(pKey)
+    , pN_(pN)
+    , bigBuffer_(blockSize * countTasks)
+    , tasks_(countTasks)
+{
+    assert(pKey != nullptr);
+    assert(pN != nullptr);
+
+    for(auto& t : tasks_)
+        t.setNotifier(&condVar_);
+}
+
+std::size_t RsaProcessor::bufferSize() const
+{
+    return bigBuffer_.size();
+}
 
 void RsaProcessor::process(std::istream& input, std::ostream& output, std::size_t countBytes)
 {
@@ -19,15 +38,14 @@ void RsaProcessor::process(std::istream& input, std::ostream& output, std::size_
         auto endChunk = beginChunk + blockSize_;
         lastWritten = endChunk;
 
-        tasks_.at(taskIdx).run([this, beginChunk, endChunk] {
+        tasks_.at(taskIdx).run([this, beginChunk, endChunk]
+        {
             auto endWritten = rsa(beginChunk, endChunk, beginChunk, *pKey_, *pN_);
             if(endWritten != endChunk)
             {
                 std::rotate(beginChunk, endWritten, endChunk);
                 std::fill_n(beginChunk, endChunk - endWritten, 0);
             }
-
-            condVar_.notify_all();
         });
     }
 
@@ -36,8 +54,8 @@ void RsaProcessor::process(std::istream& input, std::ostream& output, std::size_
         lastWritten = rsa(lastWritten, lastWritten + remainingBytes, lastWritten, *pKey_, *pN_);
 
     std::unique_lock<std::mutex> lock(mtx_);
-    condVar_.wait(lock, [this, countTasks]{
-        return std::all_of(tasks_.cbegin(), tasks_.cbegin() + countTasks, [](const auto& t) { return t.done(); });
+    condVar_.wait(lock, [this, countTasks] {
+        return std::all_of(tasks_.cbegin(), tasks_.cbegin() + countTasks, IsDone());
     });
 
     output.write(reinterpret_cast<char*>(bigBuffer_.data()), lastWritten - bigBuffer_.data());
