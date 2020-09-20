@@ -1,6 +1,7 @@
 #include "rsa.h"
 #include "algorithms.h"
 #include "scope_exit.h"
+#include "RsaProcessor.h"
 
 #include <iostream>
 #include <fstream>
@@ -110,24 +111,16 @@ void rsa_mt(std::istream& input, std::ostream& output, std::size_t blockSize, co
 {
     assert(countThreads > 0);
 
-    std::vector<unsigned char> bigBuffer(blockSize * countThreads, 0);
+    RsaProcessor processor(blockSize, countThreads, &key, &n);
+
     const auto fileSize = size_of_file(input);
-    const auto countBigBuffers = fileSize / bigBuffer.size();
+    const auto countBigBuffers = fileSize / processor.bufferSize();
 
     for(std::size_t buffIdx = 0; buffIdx < countBigBuffers; ++buffIdx)
-    {
-        input.read(reinterpret_cast<char*>(bigBuffer.data()), bigBuffer.size());
-        rsa_chunk_mt(bigBuffer, bigBuffer.size(), blockSize, key, n, countThreads);
-        output.write(reinterpret_cast<char*>(bigBuffer.data()), bigBuffer.size());
-    }
+        processor.process(input, output, processor.bufferSize());
 
-    const auto remainBytes = fileSize % bigBuffer.size();
-    if(remainBytes > 0)
-    {
-        input.read(reinterpret_cast<char*>(bigBuffer.data()), remainBytes);
-        rsa_chunk_mt(bigBuffer, remainBytes, blockSize, key, n, countThreads);
-        output.write(reinterpret_cast<char*>(bigBuffer.data()), blockSize * (remainBytes / blockSize + 1));
-    }
+    const auto remainingBytes = fileSize - (countBigBuffers * processor.bufferSize());
+    processor.process(input, output, remainingBytes);
 }
 
 void rsa_mt(const std::string& inputFilename, const std::string& outputFilename, std::size_t blockSize, const big_int& key, const big_int& n, std::size_t countThreads)

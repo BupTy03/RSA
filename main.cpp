@@ -80,8 +80,8 @@ void test()
     const std::size_t countThreads = 16;
 
     const auto[pub, prv, n] = generate_rsa_keys(gen, blockSize);
-    rsa(filename, encrypted, blockSize, pub, n);
-    rsa(encrypted, decrypted, blockSize, prv, n);
+    rsa_mt(filename, encrypted, blockSize, pub, n, countThreads);
+    rsa_mt(encrypted, decrypted, blockSize, prv, n, countThreads);
 }
 
 
