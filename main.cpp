@@ -4,6 +4,7 @@
 
 #include <boost/program_options.hpp>
 #include <iostream>
+#include <thread>
 
 
 namespace po = boost::program_options;
@@ -41,7 +42,8 @@ void execute_program(int argc, char* argv[])
             ("input-file,i", po::value<std::string>(), "Input file")
             ("output-file,o", po::value<std::string>(), "Output file")
             ("key,k", po::value<std::string>(), "Key in HEX format: public (for encrypt) or private (for decrypt)")
-            ("modulus,n", po::value<std::string>(), "Modulus (n)");
+            ("modulus,n", po::value<std::string>(), "Modulus (n)")
+            ("fast,f", "Fast mode (Multi-threaded with a large memory usage)");
 
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -59,16 +61,27 @@ void execute_program(int argc, char* argv[])
         return;
     }
 
-    rsa(require_string_option(vm, "input-file"),
-        require_string_option(vm, "output-file"),
-        blockSize,
-        from_hex(require_string_option(vm, "key")),
-        from_hex(require_string_option(vm, "modulus")));
+    if(vm.count("fast"))
+    {
+        rsa_mt(require_string_option(vm, "input-file"),
+            require_string_option(vm, "output-file"),
+            blockSize,
+            from_hex(require_string_option(vm, "key")),
+            from_hex(require_string_option(vm, "modulus")), std::thread::hardware_concurrency());
+    }
+    else
+    {
+        rsa(require_string_option(vm, "input-file"),
+            require_string_option(vm, "output-file"),
+            blockSize,
+            from_hex(require_string_option(vm, "key")),
+            from_hex(require_string_option(vm, "modulus")));
+    }
 }
 
 void test()
 {
-    const std::size_t blockSize = 256;
+    const std::size_t blockSize = 64;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -77,7 +90,7 @@ void test()
     const std::string encrypted = "../enc_troll.jpg";
     const std::string decrypted = "../dec_troll.jpg";
 
-    const std::size_t countThreads = 16;
+    const std::size_t countThreads = std::thread::hardware_concurrency();
 
     const auto[pub, prv, n] = generate_rsa_keys(gen, blockSize);
     rsa_mt(filename, encrypted, blockSize, pub, n, countThreads);
@@ -87,17 +100,17 @@ void test()
 
 int main(int argc, char* argv[])
 {
-//    try {
-//        execute_program(argc, argv);
-//    }
-//    catch (std::exception& e) {
-//        std::cerr << "Error: " << e.what() << std::endl;
-//        return -1;
-//    }
-//    catch (...) {
-//        std::cerr << "Unknown error" << std::endl;
-//        return -2;
-//    }
-    test();
+    try {
+        execute_program(argc, argv);
+    }
+    catch (std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return -1;
+    }
+    catch (...) {
+        std::cerr << "Unknown error" << std::endl;
+        return -2;
+    }
+
     return 0;
 }
